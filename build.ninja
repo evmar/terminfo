@@ -1,0 +1,11 @@
+rule compile
+  command = 6g -I. $in
+  description = COMPILE $in
+
+rule link
+  command = 6l -L. -o $out $in
+  description = LINK $out
+
+build terminfo.6: compile terminfo.go
+build termdump.6: compile termdump.go | terminfo.6
+build termdump: link termdump.6

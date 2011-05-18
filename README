@@ -1,0 +1,7 @@
+(Just playing with Go.)
+
+This module reads terminfo databases.
+See "man 5 term".
+
+The binary dumps all the strings from a given database.
+Use it like:  ./termdump /lib/terminfo/x/xterm
