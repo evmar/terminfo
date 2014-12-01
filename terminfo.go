@@ -1016,31 +1016,31 @@ func Parse(r io.Reader) (term *Term, err os.Error) {
 		return
 	}
 	magic := header[0]
-	names_len := header[1]
-	bool_count := header[2]
-	int_count := header[3]
-	string_count := header[4]
-	string_table_size := header[5]
+	namesLen := header[1]
+	boolCount := header[2]
+	intCount := header[3]
+	stringCount := header[4]
+	stringTableSize := header[5]
 
 	if magic != 0432 {
-		err = os.NewError("bad magic")
-		return
+		return nil, os.NewError("bad magic")
 	}
 
 	term = new(Term)
 
-	buf := make([]byte, names_len)
+	buf := make([]byte, namesLen)
 	_, err = io.ReadFull(r, buf)
 	if err != nil {
-		return
+                // I often do this, but you might want to return nil when returning with err != nil. You could also have a working Term with a different name so that plain "return" still returns a nil Term.
+		return nil, err
 	}
 	// buf is NUL-terminated in the file; drop that.
 	term.Names = strings.Split(string(buf[0:len(buf)-1]), "|", -1)
 
-	bools := make([]byte, bool_count)
+	bools := make([]byte, boolCount)
 	err = binary.Read(r, binary.LittleEndian, &bools)
 	if err != nil {
-		return
+		return nil, err
 	}
 	term.Bools = make(map[BoolAttr]bool)
 	for i, b := range bools {
@@ -1050,21 +1050,21 @@ func Parse(r io.Reader) (term *Term, err os.Error) {
 	}
 
 	// Skip padding byte if necessary.
-	if bool_count % 2 != 0 {
-		n, err := r.Read(make([]byte, 1))
+	if boolCount % 2 != 0 {
+                var scratch [1]byte
+		n, err := r.Read(scratch[:])
 		if err != nil {
-			return
+			return nil, err
 		}
 		if n < 1 {
-			err = io.ErrUnexpectedEOF
-			return
+			return nil, io.ErrUnexpectedEOF
 		}
 	}
 
-	nums := make([]uint16, int_count)
+	nums := make([]uint16, intCount)
 	err = binary.Read(r, binary.LittleEndian, &nums)
 	if err != nil {
-		return
+		return nil, err
 	}
 	term.Numbers = make(map[NumberAttr]int)
 	for i, n := range(nums) {
@@ -1073,24 +1073,23 @@ func Parse(r io.Reader) (term *Term, err os.Error) {
 		}
 	}
 
-	string_offsets := make([]uint16, string_count)
-	err = binary.Read(r, binary.LittleEndian, &string_offsets)
+	stringOffsets := make([]uint16, stringCount)
+	err = binary.Read(r, binary.LittleEndian, &stringOffsets)
 	if err != nil {
-		return
+		return nil, err
 	}
 
-	buf = make([]byte, string_table_size)
+	buf = make([]byte, stringTableSize)
 	n, err := r.Read(buf)
 	if err != nil {
-		return
+		return nil, err
 	}
 	if n < 1 {
-		err = io.ErrUnexpectedEOF
-		return
+		return nil, io.ErrUnexpectedEOF
 	}
 
 	term.Strings = make(map[StringAttr]string)
-	for i, ofs := range string_offsets {
+	for i, ofs := range stringOffsets {
 		if ofs == 0xFFFF {
 			continue
 		}
